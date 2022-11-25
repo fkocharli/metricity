@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/fkocharli/metricity/internal/server"
@@ -44,6 +45,9 @@ func (s *ServerHandlers) updateGauge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !valid(r.URL.Path) {
+		w.WriteHeader(http.StatusNotFound)
+	}
 	n, m := getMetricsFromPath(r.URL.Path)
 
 	err := s.Repository.UpdateGaugeMetrics(n, m)
@@ -63,6 +67,9 @@ func (s *ServerHandlers) updateCounter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !valid(r.URL.Path) {
+		w.WriteHeader(http.StatusNotFound)
+	}
 	n, m := getMetricsFromPath(r.URL.Path)
 
 	err := s.Repository.UpdateCounterMetrics(n, m)
@@ -86,4 +93,13 @@ func getMetricsFromPath(path string) (name, value string) {
 	name = metrics[3]
 	value = metrics[4]
 	return
+}
+
+func valid(s string) bool {
+	matched, err := regexp.MatchString(`/update/(gauge|counter)/[A-Za-z]+/[0-9]`, s)
+	if err != nil {
+		return false
+	}
+
+	return matched
 }
