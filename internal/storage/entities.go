@@ -21,7 +21,7 @@ type MemStorage struct {
 func (m *MemStorage) UpdateGaugeMetrics(name, value string) error {
 	g, err := strconv.Atoi(value)
 	if err != nil {
-		return fmt.Errorf("Unable to parse value to gauge. Value: %v, Error: %v", value, err)
+		return fmt.Errorf("unable to parse value to gauge. value: %v, error: %v", value, err)
 	}
 
 	m.GaugeMetrics[name] = gauge(g)
@@ -31,7 +31,7 @@ func (m *MemStorage) UpdateGaugeMetrics(name, value string) error {
 func (m *MemStorage) UpdateCounterMetrics(name, value string) error {
 	g, err := strconv.Atoi(value)
 	if err != nil {
-		return fmt.Errorf("Unable to parse value to counter. Value: %v, Error: %v", value, err)
+		return fmt.Errorf("unable to parse value to counter. value: %v, error: %v", value, err)
 	}
 
 	m.CounterMetrics[name] += counter(g)
