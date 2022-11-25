@@ -20,15 +20,15 @@ func NewHandler(r storage.Repository) ServerHandlers {
 	}
 
 	sh.Routes = []server.Route{
-		server.Route{
+		{
 			Path:    "/update/gauge/",
 			Handler: http.HandlerFunc(sh.updateGauge),
 		},
-		server.Route{
+		{
 			Path:    "/update/counter/",
 			Handler: http.HandlerFunc(sh.updateCounter),
 		},
-		// server.Route{
+		// {
 		// 	Path:    "/get",
 		// 	Handler: http.HandlerFunc(sh.get),
 		// },
@@ -52,6 +52,7 @@ func (s *ServerHandlers) updateGauge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
 }
@@ -70,6 +71,7 @@ func (s *ServerHandlers) updateCounter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
 }
