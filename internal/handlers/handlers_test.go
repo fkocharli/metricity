@@ -87,6 +87,7 @@ func TestHandlers(t *testing.T) {
 			tt.request.handler(w, request)
 
 			results := w.Result()
+			defer results.Body.Close()
 
 			assert.Equal(t, tt.want.contenType, results.Header.Get("Content-Type"))
 			assert.Equal(t, tt.want.statusCode, results.StatusCode)
