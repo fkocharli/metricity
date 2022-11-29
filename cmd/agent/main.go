@@ -103,7 +103,7 @@ func RunAgent(metrics *MetricValues) {
 			collectMetrics(metrics)
 		case <-reportTicker.C:
 			for k, v := range metrics.Gauge {
-				url := fmt.Sprintf("http://%s:%s/update/gauge/%s/%s", address, port, k, fmt.Sprint(v))
+				url := fmt.Sprintf("http://%s:%s/update/gauge/%s/%f", address, port, k, v)
 				req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 				if err != nil {
 					log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
@@ -113,7 +113,7 @@ func RunAgent(metrics *MetricValues) {
 					log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
 				}
 			}
-			url := fmt.Sprintf("http://%s:%s/update/counter/PollCount/%s", address, port, fmt.Sprint(metrics.PollCount))
+			url := fmt.Sprintf("http://%s:%s/update/counter/PollCount/%d", address, port, metrics.PollCount)
 			req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 			if err != nil {
 				log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)

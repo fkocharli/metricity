@@ -33,7 +33,7 @@ func NewStorage() *MemStorage {
 }
 
 func (m *MemStorage) UpdateGaugeMetrics(name, value string) error {
-	g, err := strconv.Atoi(value)
+	g, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		return fmt.Errorf("unable to parse value to gauge. value: %v, error: %v", value, err)
 	}

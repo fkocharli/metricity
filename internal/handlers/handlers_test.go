@@ -47,7 +47,7 @@ func TestHandlers(t *testing.T) {
 			request: request{
 				path:    "/update/gauge/Sys/4.063232e+06",
 				method:  http.MethodPost,
-				handler: handler.updateGauge,
+				handler: handler.update,
 			},
 			want: want{
 				contenType: "text/plain",
@@ -59,7 +59,7 @@ func TestHandlers(t *testing.T) {
 			request: request{
 				path:    "/update/counter/Counter/10",
 				method:  http.MethodPost,
-				handler: handler.updateCounter,
+				handler: handler.update,
 			},
 			want: want{
 				contenType: "text/plain",

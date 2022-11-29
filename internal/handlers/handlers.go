@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/fkocharli/metricity/internal/server"
 	"github.com/fkocharli/metricity/internal/storage"
@@ -29,42 +30,41 @@ func NewHandler(r Repository) *ServerHandlers {
 		Repository: r,
 	}
 
-	sh.Mux.Route("/update", func(r chi.Router) {
-		r.Post("/counter/{metricname}/{metricvalue}", sh.updateCounter)
-		r.Post("/gauge/{metricname}/{metricvalue}", sh.updateGauge)
-	})
+	sh.Mux.Post("/update/{type}/{metricname}/{metricvalue}", sh.update)
 
 	return sh
 
 }
 
-func (s *ServerHandlers) updateGauge(w http.ResponseWriter, r *http.Request) {
-
+func (s *ServerHandlers) update(w http.ResponseWriter, r *http.Request) {
+	t := chi.URLParam(r, "type")
 	n := chi.URLParam(r, "metricname")
 	m := chi.URLParam(r, "metricvalue")
 
-	err := s.Repository.UpdateGaugeMetrics(n, m)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+	if _, err := strconv.ParseFloat(m, 64); err != nil {
+
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	switch t {
+	case "counter":
+		err := s.Repository.UpdateCounterMetrics(n, m)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	case "gauge":
+		err := s.Repository.UpdateGaugeMetrics(n, m)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
 		return
 	}
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
-}
-
-func (s *ServerHandlers) updateCounter(w http.ResponseWriter, r *http.Request) {
-
-	n := chi.URLParam(r, "metricname")
-	m := chi.URLParam(r, "metricvalue")
-
-	err := s.Repository.UpdateCounterMetrics(n, m)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Add("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
-
 }
