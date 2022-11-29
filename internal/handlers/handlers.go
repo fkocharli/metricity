@@ -56,8 +56,7 @@ func (s *ServerHandlers) update(w http.ResponseWriter, r *http.Request) {
 	n := chi.URLParam(r, "metricname")
 	m := chi.URLParam(r, "metricvalue")
 
-	if _, err := strconv.ParseFloat(m, 32); err != nil {
-
+	if _, err := strconv.ParseFloat(m, 64); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}

@@ -34,7 +34,7 @@ func NewStorage() *MemStorage {
 }
 
 func (m *MemStorage) UpdateGaugeMetrics(name, value string) error {
-	g, err := strconv.ParseFloat(value, 32)
+	g, err := strconv.ParseFloat(value, 64)
 	if err != nil {
 		return fmt.Errorf("unable to parse value to gauge. value: %v, error: %v", value, err)
 	}
@@ -58,13 +58,13 @@ func (m *MemStorage) GetGaugeMetrics(name string) (string, error) {
 	if !ok {
 		return "", errors.New("metric not found")
 	}
-	return fmt.Sprintf("%f", v), nil
+	return fmt.Sprintf("%.3f", v), nil
 }
 
 func (m *MemStorage) GetCounterMetrics(name string) (string, error) {
 	v, ok := m.CounterMetrics[name]
 	if !ok {
-		return "", errors.New("metric not found")
+		return "", errors.New("m	etric not found")
 	}
 	return fmt.Sprintf("%d", v), nil
 }
@@ -74,11 +74,11 @@ func (m *MemStorage) GetAll() map[string]string {
 	res := make(map[string]string)
 
 	for k, v := range m.GaugeMetrics {
-		res[k] = fmt.Sprintf("%v", v)
+		res[k] = fmt.Sprintf("%.3f", v)
 	}
 
 	for k, v := range m.CounterMetrics {
-		res[k] = fmt.Sprintf("%v", v)
+		res[k] = fmt.Sprintf("%d", v)
 	}
 
 	return res
