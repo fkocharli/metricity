@@ -34,7 +34,7 @@ func NewStorage() *MemStorage {
 }
 
 func (m *MemStorage) UpdateGaugeMetrics(name, value string) error {
-	g, err := strconv.ParseFloat(value, 64)
+	g, err := strconv.ParseFloat(value, 32)
 	if err != nil {
 		return fmt.Errorf("unable to parse value to gauge. value: %v, error: %v", value, err)
 	}
@@ -67,4 +67,19 @@ func (m *MemStorage) GetCounterMetrics(name string) (string, error) {
 		return "", errors.New("Metric Not Found")
 	}
 	return fmt.Sprintf("%d", v), nil
+}
+
+func (m *MemStorage) GetAll() map[string]string {
+
+	res := make(map[string]string)
+
+	for k, v := range m.GaugeMetrics {
+		res[k] = fmt.Sprintf("%v", v)
+	}
+
+	for k, v := range m.CounterMetrics {
+		res[k] = fmt.Sprintf("%v", v)
+	}
+
+	return res
 }

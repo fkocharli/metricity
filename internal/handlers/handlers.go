@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 	"strconv"
 
@@ -8,6 +9,16 @@ import (
 	"github.com/fkocharli/metricity/internal/storage"
 	"github.com/go-chi/chi/v5"
 )
+
+const temp = `
+<html>
+	<ul>
+		{{range $key, $value := .}}
+			<li><strong>{{$key}}:</strong> {{$value}}</li>
+		{{end}}
+	</ul>
+</html>
+`
 
 type ServerHandlers struct {
 	*chi.Mux
@@ -19,6 +30,7 @@ type Repository interface {
 	UpdateCounterMetrics(name, value string) error
 	GetGaugeMetrics(name string) (string, error)
 	GetCounterMetrics(name string) (string, error)
+	GetAll() map[string]string
 }
 
 func NewRepository() Repository {
@@ -34,7 +46,7 @@ func NewHandler(r Repository) *ServerHandlers {
 
 	sh.Mux.Post("/update/{type}/{metricname}/{metricvalue}", sh.update)
 	sh.Mux.Get("/value/{type}/{metricname}", sh.get)
-
+	sh.Mux.Get("/", sh.home)
 	return sh
 
 }
@@ -44,7 +56,7 @@ func (s *ServerHandlers) update(w http.ResponseWriter, r *http.Request) {
 	n := chi.URLParam(r, "metricname")
 	m := chi.URLParam(r, "metricvalue")
 
-	if _, err := strconv.ParseFloat(m, 64); err != nil {
+	if _, err := strconv.ParseFloat(m, 32); err != nil {
 
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -102,4 +114,12 @@ func (s *ServerHandlers) get(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	w.Write([]byte(value))
+}
+
+func (s *ServerHandlers) home(w http.ResponseWriter, r *http.Request) {
+	t := template.Must(template.New("").Parse(temp))
+	data := s.Repository.GetAll()
+	w.Header().Add("Content-Type", "text/html")
+	t.Execute(w, data)
+	w.WriteHeader(http.StatusOK)
 }

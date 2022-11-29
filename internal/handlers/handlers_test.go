@@ -30,6 +30,10 @@ func (m *MockStorageType) GetCounterMetrics(name string) (string, error) {
 	return "", nil
 }
 
+func (m *MockStorageType) GetAll() map[string]string {
+	return nil
+}
+
 func TestHandlers(t *testing.T) {
 	type want struct {
 		contenType string
