@@ -47,7 +47,7 @@ func TestHandlers(t *testing.T) {
 			request: request{
 				path:    "/update/gauge/Sys/4.063232e+06",
 				method:  http.MethodPost,
-				handler: handler.update,
+				handler: handler.updateGauge,
 			},
 			want: want{
 				contenType: "text/plain",
@@ -59,23 +59,11 @@ func TestHandlers(t *testing.T) {
 			request: request{
 				path:    "/update/counter/Counter/10",
 				method:  http.MethodPost,
-				handler: handler.update,
+				handler: handler.updateCounter,
 			},
 			want: want{
 				contenType: "text/plain",
 				statusCode: http.StatusOK,
-			},
-		},
-		{
-			name: "Update Wrong Method",
-			request: request{
-				path:    "/update/counter/Counter/10",
-				method:  http.MethodGet,
-				handler: handler.update,
-			},
-			want: want{
-				contenType: "",
-				statusCode: http.StatusMethodNotAllowed,
 			},
 		},
 	}
