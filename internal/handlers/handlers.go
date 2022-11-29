@@ -17,6 +17,8 @@ type ServerHandlers struct {
 type Repository interface {
 	UpdateGaugeMetrics(name, value string) error
 	UpdateCounterMetrics(name, value string) error
+	GetGaugeMetrics(name string) (string, error)
+	GetCounterMetrics(name string) (string, error)
 }
 
 func NewRepository() Repository {
@@ -31,6 +33,7 @@ func NewHandler(r Repository) *ServerHandlers {
 	}
 
 	sh.Mux.Post("/update/{type}/{metricname}/{metricvalue}", sh.update)
+	sh.Mux.Get("/value/{type}/{metricname}", sh.get)
 
 	return sh
 
@@ -67,4 +70,36 @@ func (s *ServerHandlers) update(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *ServerHandlers) get(w http.ResponseWriter, r *http.Request) {
+	t := chi.URLParam(r, "type")
+	n := chi.URLParam(r, "metricname")
+
+	var value string
+
+	switch t {
+	case "counter":
+		v, err := s.Repository.GetCounterMetrics(n)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		value = v
+	case "gauge":
+		v, err := s.Repository.GetGaugeMetrics(n)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		value = v
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+
+	w.Write([]byte(value))
 }

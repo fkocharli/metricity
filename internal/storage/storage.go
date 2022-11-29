@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -52,6 +53,18 @@ func (m *MemStorage) UpdateCounterMetrics(name, value string) error {
 	return nil
 }
 
-// func (m *MemStorage) Get() string {
-// 	return fmt.Sprint(m)
-// }
+func (m *MemStorage) GetGaugeMetrics(name string) (string, error) {
+	v, ok := m.GaugeMetrics[name]
+	if !ok {
+		return "", errors.New("Metric Not Found")
+	}
+	return fmt.Sprintf("%f", v), nil
+}
+
+func (m *MemStorage) GetCounterMetrics(name string) (string, error) {
+	v, ok := m.CounterMetrics[name]
+	if !ok {
+		return "", errors.New("Metric Not Found")
+	}
+	return fmt.Sprintf("%d", v), nil
+}
