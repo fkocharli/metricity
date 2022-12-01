@@ -1,49 +1,59 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
-	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/fkocharli/metricity/internal/server"
 	"github.com/fkocharli/metricity/internal/storage"
+	"github.com/go-chi/chi/v5"
 )
 
+const templatePath = "../../internal/static/html/index.html"
+
 type ServerHandlers struct {
-	Routes     []server.Route
-	Repository storage.Repository
+	*chi.Mux
+	Repository Repository
 }
 
-func NewHandler(r storage.Repository) ServerHandlers {
+type Repository interface {
+	UpdateGaugeMetrics(name, value string) error
+	UpdateCounterMetrics(name, value string) error
+	GetGaugeMetrics(name string) (string, error)
+	GetCounterMetrics(name string) (string, error)
+	GetAll() map[string]string
+}
 
-	sh := ServerHandlers{
+func NewRepository() Repository {
+	return storage.NewStorage()
+}
+
+func NewHandler(r Repository) *ServerHandlers {
+
+	sh := &ServerHandlers{
+		Mux:        server.NewRouter(),
 		Repository: r,
 	}
 
-	sh.Routes = []server.Route{
-		{
-			Path:    "/update/",
-			Handler: http.HandlerFunc(sh.update),
-		},
-	}
-
+	sh.Mux.Post("/update/{type}/{metricname}/{metricvalue}", sh.update)
+	sh.Mux.Get("/value/{type}/{metricname}", sh.get)
+	sh.Mux.Get("/", sh.home)
 	return sh
 
 }
 
 func (s *ServerHandlers) update(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+	t := chi.URLParam(r, "type")
+	n := chi.URLParam(r, "metricname")
+	m := chi.URLParam(r, "metricvalue")
+
+	if _, err := strconv.ParseFloat(m, 64); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	x, n, m, er := valid(r.URL.Path, w)
-	if er != nil {
-		return
-	}
-
-	switch x {
+	switch t {
 	case "counter":
 		err := s.Repository.UpdateCounterMetrics(n, m)
 		if err != nil {
@@ -56,35 +66,51 @@ func (s *ServerHandlers) update(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+		return
+	}
+
+	w.Header().Add("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *ServerHandlers) get(w http.ResponseWriter, r *http.Request) {
+	t := chi.URLParam(r, "type")
+	n := chi.URLParam(r, "metricname")
+
+	var value string
+
+	switch t {
+	case "counter":
+		v, err := s.Repository.GetCounterMetrics(n)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		value = v
+	case "gauge":
+		v, err := s.Repository.GetGaugeMetrics(n)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		value = v
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+		return
 	}
 
 	w.Header().Add("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 
+	w.Write([]byte(value))
 }
 
-func valid(s string, w http.ResponseWriter) (string, string, string, error) {
-	p := strings.Split(s, "/")
-	matched, err := regexp.MatchString(`/update/(gauge|counter)/[A-Za-z0-9]+/[0-9]`, s)
-	if err != nil || !matched {
-
-		if p[2] != "counter" && p[2] != "gauge" {
-			w.WriteHeader(http.StatusNotImplemented)
-			return "", "", "", err
-		}
-
-		if len(p) < 5 {
-			w.WriteHeader(http.StatusNotFound)
-			return "", "", "", err
-		}
-
-		if _, err := strconv.Atoi(p[4]); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return "", "", "", err
-		}
-		w.WriteHeader(http.StatusNotFound)
-		return "", "", "", err
-	}
-
-	return p[1], p[2], p[3], nil
+func (s *ServerHandlers) home(w http.ResponseWriter, r *http.Request) {
+	t := template.Must(template.ParseFiles(templatePath))
+	data := s.Repository.GetAll()
+	w.Header().Add("Content-Type", "text/html")
+	t.Execute(w, data)
+	w.WriteHeader(http.StatusOK)
 }

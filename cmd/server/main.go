@@ -7,7 +7,6 @@ import (
 
 	"github.com/fkocharli/metricity/internal/handlers"
 	"github.com/fkocharli/metricity/internal/server"
-	"github.com/fkocharli/metricity/internal/storage"
 )
 
 const (
@@ -16,12 +15,10 @@ const (
 
 func main() {
 
-	repo := storage.NewRepository()
+	repo := handlers.NewRepository()
 	handler := handlers.NewHandler(repo)
 
-	mux := server.NewRouter(handler.Routes)
-
-	serv := server.New(address, mux)
+	serv := server.New(address, handler.Mux)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type MockStorageType struct {
@@ -21,13 +22,25 @@ func (m *MockStorageType) UpdateCounterMetrics(name, value string) error {
 	return nil
 }
 
+func (m *MockStorageType) GetGaugeMetrics(name string) (string, error) {
+	return "", nil
+}
+
+func (m *MockStorageType) GetCounterMetrics(name string) (string, error) {
+	return "", nil
+}
+
+func (m *MockStorageType) GetAll() map[string]string {
+	return nil
+}
+
 func TestHandlers(t *testing.T) {
 	type want struct {
 		contenType string
 		statusCode int
 	}
 
-	type request struct {
+	type req struct {
 		path    string
 		method  string
 		handler http.HandlerFunc
@@ -38,13 +51,13 @@ func TestHandlers(t *testing.T) {
 	handler := NewHandler(&mockRepo)
 
 	tests := []struct {
-		name    string
-		request request
-		want    want
+		name string
+		req  req
+		want want
 	}{
 		{
 			name: "Update Gauge Metrics",
-			request: request{
+			req: req{
 				path:    "/update/gauge/Sys/4.063232e+06",
 				method:  http.MethodPost,
 				handler: handler.update,
@@ -56,7 +69,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name: "Update Counter Metrics",
-			request: request{
+			req: req{
 				path:    "/update/counter/Counter/10",
 				method:  http.MethodPost,
 				handler: handler.update,
@@ -66,31 +79,22 @@ func TestHandlers(t *testing.T) {
 				statusCode: http.StatusOK,
 			},
 		},
-		{
-			name: "Update Wrong Method",
-			request: request{
-				path:    "/update/counter/Counter/10",
-				method:  http.MethodGet,
-				handler: handler.update,
-			},
-			want: want{
-				contenType: "",
-				statusCode: http.StatusMethodNotAllowed,
-			},
-		},
 	}
+
+	r := NewHandler(&mockRepo)
+	s := httptest.NewServer(r)
+	defer s.Close()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			request := httptest.NewRequest(tt.request.method, tt.request.path, nil)
+			req := httptest.NewRequest(tt.req.method, s.URL+tt.req.path, nil)
+			req.RequestURI = ""
 
-			tt.request.handler(w, request)
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
 
-			results := w.Result()
-			defer results.Body.Close()
-
-			assert.Equal(t, tt.want.contenType, results.Header.Get("Content-Type"))
-			assert.Equal(t, tt.want.statusCode, results.StatusCode)
+			assert.Equal(t, tt.want.contenType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
 		})
 	}
 }

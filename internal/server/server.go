@@ -4,18 +4,16 @@ import (
 	"context"
 	"net/http"
 	"sync"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type Server struct {
 	server *http.Server
 }
 
-type Route struct {
-	Path    string
-	Handler http.HandlerFunc
-}
-
-func New(address string, handler http.Handler) *Server {
+func New(address string, handler *chi.Mux) *Server {
 	return &Server{
 		server: &http.Server{
 			Handler: handler,
@@ -24,13 +22,15 @@ func New(address string, handler http.Handler) *Server {
 	}
 }
 
-func NewRouter(r []Route) *http.ServeMux {
-	mux := http.NewServeMux()
-	for _, v := range r {
-		mux.HandleFunc(v.Path, v.Handler)
-	}
+func NewRouter() *chi.Mux {
 
-	return mux
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Recoverer)
+
+	return r
 }
 
 func (s *Server) Run(ctx context.Context) (err error) {
