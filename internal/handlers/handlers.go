@@ -10,15 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const temp = `
-<html>
-	<ul>
-		{{range $key, $value := .}}
-			<li><strong>{{$key}}:</strong> {{$value}}</li>
-		{{end}}
-	</ul>
-</html>
-`
+const templatePath = "../../internal/static/html/index.html"
 
 type ServerHandlers struct {
 	*chi.Mux
@@ -116,7 +108,7 @@ func (s *ServerHandlers) get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *ServerHandlers) home(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.New("").Parse(temp))
+	t := template.Must(template.ParseFiles(templatePath))
 	data := s.Repository.GetAll()
 	w.Header().Add("Content-Type", "text/html")
 	t.Execute(w, data)
