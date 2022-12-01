@@ -30,56 +30,15 @@ const (
 )
 
 var (
-	metricList = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc"}
+	metricList   = []string{"Alloc", "BuckHashSys", "Frees", "GCCPUFraction", "GCSys", "HeapAlloc", "HeapIdle", "HeapInuse", "HeapObjects", "HeapReleased", "HeapSys", "LastGC", "Lookups", "MCacheInuse", "MCacheSys", "MSpanInuse", "MSpanSys", "Mallocs", "NextGC", "NumForcedGC", "NumGC", "OtherSys", "PauseTotalNs", "StackInuse", "StackSys", "Sys", "TotalAlloc"}
+	poolticket   = time.NewTicker(pollInterval)
+	reportTicker = time.NewTicker(reportInterval)
 )
 
 func main() {
+	currentMetricsValue := newMetricValues(metricList)
 
-	currentMetricsValue := &MetricValues{
-		Gauge:     make(map[string]gauge),
-		PollCount: 0,
-	}
-
-	for _, v := range metricList {
-		currentMetricsValue.Gauge[v] = 0
-	}
-
-	poolticket := time.NewTicker(pollInterval)
-	reportTicker := time.NewTicker(reportInterval)
-
-	client := http.Client{
-		Timeout: 10 * time.Second,
-	}
-	ctx := context.Background()
-
-	for {
-		select {
-		case <-poolticket.C:
-			collectMetrics(currentMetricsValue)
-		case <-reportTicker.C:
-			for k, v := range currentMetricsValue.Gauge {
-				url := fmt.Sprintf("http://%s:%s/update/gauge/%s/%s", address, port, k, fmt.Sprint(v))
-				req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
-				if err != nil {
-					log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
-				}
-				err = sendMetrics(req, client)
-				if err != nil {
-					log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
-				}
-			}
-			url := fmt.Sprintf("http://%s:%s/update/gauge/PollCount/%s", address, port, fmt.Sprint(currentMetricsValue.PollCount))
-			req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
-			if err != nil {
-				log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
-			}
-			err = sendMetrics(req, client)
-			if err != nil {
-				log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
-			}
-
-		}
-	}
+	RunAgent(currentMetricsValue)
 
 }
 
@@ -119,4 +78,51 @@ func sendMetrics(request *http.Request, client http.Client) error {
 		return err
 	}
 	return nil
+}
+
+func newMetricValues(metricList []string) *MetricValues {
+	m := &MetricValues{
+		Gauge:     make(map[string]gauge),
+		PollCount: 0,
+	}
+	for _, v := range metricList {
+		m.Gauge[v] = 0
+	}
+	return m
+}
+
+func RunAgent(metrics *MetricValues) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	ctx := context.Background()
+
+	for {
+		select {
+		case <-poolticket.C:
+			collectMetrics(metrics)
+		case <-reportTicker.C:
+			for k, v := range metrics.Gauge {
+				url := fmt.Sprintf("http://%s:%s/update/gauge/%s/%s", address, port, k, fmt.Sprint(v))
+				req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+				if err != nil {
+					log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
+				}
+				err = sendMetrics(req, client)
+				if err != nil {
+					log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
+				}
+			}
+			url := fmt.Sprintf("http://%s:%s/update/counter/PollCount/%s", address, port, fmt.Sprint(metrics.PollCount))
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+			if err != nil {
+				log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
+			}
+			err = sendMetrics(req, client)
+			if err != nil {
+				log.Printf("Unable send metric for URL: %s \n Error: %s", url, err)
+			}
+
+		}
+	}
 }
